@@ -56,7 +56,22 @@ func (s *Server) handle(conn net.Conn) {
 
 	s.broadCast(msg)
 
-	user.receiveMsg()
+	go func() {
+		buf := make([]byte, 4096)
+		for {
+			n, err := conn.Read(buf)
+			if n == 0 {
+				s.broadCast(user.name + "下线了")
+			}
+			if err != nil {
+				fmt.Println("conn read err", err)
+				return
+			}
+			msg := string(buf)
+			s.broadCast(msg)
+		}
+	}()
+
 	select {}
 }
 
