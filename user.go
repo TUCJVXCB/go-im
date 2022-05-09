@@ -1,6 +1,9 @@
 package main
 
-import "net"
+import (
+	"net"
+	"strings"
+)
 
 type User struct {
 	name   string
@@ -51,6 +54,16 @@ func (u *User) DoMessage(msg string) {
 			onlineMsg := "[" + user.addr + "]" + user.name + ":在线...\n"
 			u.sendMessage(onlineMsg)
 		}
+	} else if strings.HasPrefix(msg, "rename_") {
+		_, newName, _ := strings.Cut(msg, "rename_")
+		if u.server.userMap[newName] != nil {
+			u.sendMessage("用户名已重复~\n")
+			return
+		}
+		delete(u.server.userMap, u.addr)
+		u.name = newName
+		u.server.userMap[newName] = u
+		u.sendMessage("您已成功修改用户名:" + newName)
 	} else {
 		u.server.broadCast(u, msg)
 	}
