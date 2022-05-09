@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"sync"
 )
@@ -48,27 +49,23 @@ func (s *Server) Start() {
 }
 
 func (s *Server) handle(conn net.Conn) {
-	user := NewUser(conn)
-	msg := "[" + user.addr + "]" + user.name + "加入连接\n"
-	s.lock.Lock()
-	s.userMap[user.name] = user
-	s.lock.Unlock()
-
-	s.broadCast(msg)
+	user := NewUser(conn, s)
+	user.Online()
 
 	go func() {
 		buf := make([]byte, 4096)
 		for {
 			n, err := conn.Read(buf)
 			if n == 0 {
-				s.broadCast(user.name + "下线了")
+				user.offline()
+				return
 			}
-			if err != nil {
+			if err != nil && err != io.EOF {
 				fmt.Println("conn read err", err)
 				return
 			}
-			msg := string(buf)
-			s.broadCast(msg)
+			msg := string(buf[:n-1])
+			user.DoMessage(msg)
 		}
 	}()
 
@@ -78,14 +75,15 @@ func (s *Server) handle(conn net.Conn) {
 func (s *Server) listen() {
 	for {
 		msg := <-s.C
-		s.broadCast(msg)
+		s.lock.Lock()
+		for _, user := range s.userMap {
+			user.C <- msg
+		}
+		s.lock.Unlock()
 	}
 }
 
-func (s *Server) broadCast(msg string) {
-	s.lock.Lock()
-	for _, user := range s.userMap {
-		user.C <- msg
-	}
-	s.lock.Unlock()
+func (s *Server) broadCast(user *User, msg string) {
+	sendMsg := "[" + user.addr + "]" + user.name + ":" + msg
+	s.C <- sendMsg
 }
