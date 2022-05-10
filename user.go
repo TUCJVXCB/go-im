@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net"
 	"strings"
 )
@@ -64,6 +65,14 @@ func (u *User) DoMessage(msg string) {
 		u.name = newName
 		u.server.userMap[newName] = u
 		u.sendMessage("您已成功修改用户名:" + newName)
+	} else if strings.HasPrefix(msg, "sendTO_") {
+		split := strings.Split(msg, "_")
+		user, ok := u.server.userMap[split[1]]
+		if !ok {
+			u.sendMessage(fmt.Sprintf("用户%s不在线", split[1]))
+			return
+		}
+		user.sendMessage(u.name + "对您说:" + split[2])
 	} else {
 		u.server.broadCast(u, msg)
 	}

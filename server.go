@@ -76,7 +76,7 @@ func (s *Server) handle(conn net.Conn) {
 	for {
 		select {
 		case <-isLive:
-		case <-time.After(time.Second * 10):
+		case <-time.After(time.Minute * 10):
 			user.sendMessage("你被踢了")
 
 			close(user.C)
